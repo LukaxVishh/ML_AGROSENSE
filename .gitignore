@@ -226,3 +226,6 @@ frontend/dist/
 *.tsbuildinfo
 .env.local
 .env.*.local
+
+# Artefatos de modelos gerados localmente
+backend/app/models/*.joblib

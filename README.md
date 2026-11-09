@@ -34,7 +34,7 @@ Fernando assume o Dev 1. Os papéis dos Devs 2–5 ainda não têm nomes atribu�
 | :---: | :--- | :--- | :---: | --- |
 | **1 — Fernando** | Base, componentes React, mocks e integração da interface | Front executável sem Python, tipos e contrato para o back-end | Concluído (Front) | Contrato alinhado com Dev 5 |
 | **2** | Dados, importação e validação | Ingestão CSV/JSON/XML, validação 13 colunas, 4 bases e 17 testes | **Concluído [x]** | Esquema de 13 colunas |
-| **3** | Regressão de produtividade | Pipeline de regressão, métricas, persistência joblib e inferência | Pendente [ ] | Dados do Dev 2 |
+| **3** | Regressão de produtividade | Pipeline de regressão, métricas, persistência joblib e inferência | Implementado (módulo Python) | Dados do Dev 2 |
 | **4** | Classificação de risco | Pipeline de classificação, matriz 3x3, probabilidades e joblib | Pendente [ ] | Dados do Dev 2; pré-processamento alinhado com Dev 3 |
 | **5** | API Python e integração do back-end | Servidor Flask REST, rotas HTTP e registro de modelos pré-carregados | Pendente [ ] | Contrato e funções de dados/modelos |
 
@@ -96,15 +96,15 @@ Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os 
 
 **Tarefas:**
 
-- [ ] Definir a lista explícita de preditores com base no contrato: seis variáveis numéricas e cultura. Município fica como contexto da interface.
-- [ ] Excluir `produtividade_sc_ha`, `risco_quebra` e identificadores das features.
-- [ ] Criar um pipeline com imputação, encoding e, quando necessário, escala; ajustar tudo somente no treino.
-- [ ] Implementar os três regressores selecionáveis pela interface: Random Forest, Árvore de Decisão e KNN.
-- [ ] Validar e aplicar os hiperparâmetros permitidos para cada algoritmo.
-- [ ] Comparar com um baseline, como a média do treino, mantendo a mesma divisão para comparações.
-- [ ] Calcular MAE, RMSE e R² no teste e gerar a auditoria completa dos valores reais e previstos.
-- [ ] Entregar o pipeline ajustado para inferência posterior, com seed, configuração e vínculo com o dataset.
-- [ ] Testar treino, previsão e casos inviáveis; documentar como interpretar as métricas.
+- [x] Definir a lista explícita de preditores com base no contrato: seis variáveis numéricas e cultura. Município fica como contexto da interface.
+- [x] Excluir `produtividade_sc_ha`, `risco_quebra` e identificadores das features.
+- [x] Criar um pipeline com imputação, encoding e, quando necessário, escala; ajustar tudo somente no treino.
+- [x] Implementar os três regressores selecionáveis pela interface: Random Forest, Árvore de Decisão e KNN.
+- [x] Validar e aplicar os hiperparâmetros permitidos para cada algoritmo.
+- [x] Comparar com um baseline, como a média do treino, mantendo a mesma divisão para comparações.
+- [x] Calcular MAE, RMSE e R² no teste e gerar a auditoria completa dos valores reais e previstos.
+- [x] Entregar o pipeline ajustado para inferência posterior, com seed, configuração e vínculo com o dataset.
+- [x] Testar treino, previsão e casos inviáveis; documentar como interpretar as métricas.
 
 **Entrega ao Dev 5:** funções de treino/avaliação e de inferência, pipeline ajustado, configuração aplicada e métricas no formato de `TrainingResult`. O Dev 5 registra o artefato sob um `model_id`.
 
@@ -264,3 +264,6 @@ O mapa depende de internet para o fundo cartográfico; a tabela de coordenadas p
 As [propostas iniciais de Streamlit](docs/proposta_original_streamlit.md) e de [front-end React](docs/proposta_frontend_inicial.md) foram preservadas como histórico. A implementação atual segue React e o contrato v1.0; comandos e responsabilidades antigos não substituem este README.
 
 O planejamento inicial menciona apresentação em **04/11** e entrega final em **11/11**. Confirmar datas e critérios no cronograma oficial da disciplina.
+
+
+Entrega do Dev 3: consulte o [guia de regressão](docs/entrega_dev3.md). O módulo Python está implementado; a integração HTTP depende do Dev 5. O artefato joblib contém pipeline e metadados e deve ser carregado com `load_regression`.

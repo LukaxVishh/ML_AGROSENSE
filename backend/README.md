@@ -10,7 +10,7 @@ Este documento é o guia definitivo de execução técnica para o desenvolviment
 | :---: | :--- | :--- | :---: |
 | **Dev 1** | **Interface React & Mocks** | Front-end SPA completo, mapa Leaflet, gráficos Recharts, contratos TypeScript e simulador | **Concluído [x]** |
 | **Dev 2** | **Dados, Ingestão & Qualidade** | Ingestão de CSV/JSON/XML, validação estrita das 13 colunas, 4 bases acadêmicas e 17 testes | **Concluído [x]** |
-| **Dev 3** | **Regressão de Produtividade** | Pipelines `scikit-learn`, baseline, métricas (MAE/RMSE/$R^2$) e persistência `.joblib` | **Pendente [ ]** |
+| **Dev 3** | **Regressão de Produtividade** | Pipelines `scikit-learn`, baseline, métricas (MAE/RMSE/$R^2$) e persistência `.joblib` | **Implementado [x]** |
 | **Dev 4** | **Classificação de Risco** | Pipelines `scikit-learn`, matriz de confusão $3 \times 3$, probabilidades e persistência `.joblib` | **Pendente [ ]** |
 | **Dev 5** | **API Flask & Integração** | Servidor REST, rotas `/health`, `/data`, `/upload`, `/model/train`, `/predict` e CORS | **Pendente [ ]** |
 
@@ -28,7 +28,7 @@ backend/
 │   │   ├── loader.py                # Leitura e normalização de CSV, JSON e XML seguro
 │   │   ├── validator.py             # Validação das 13 colunas, limites físicos e resumo
 │   │   └── generate_diverse_datasets.py # Gerador dos 4 cenários de teste acadêmico
-│   ├── ml/                          # [Devs 3 e 4 - PENDENTE] Machine Learning
+│   ├── ml/                          # Dev 3 implementado; Dev 4 pendente
 │   │   ├── __init__.py
 │   │   ├── preprocessing.py         # Pipeline de pré-processamento (OneHotEncoder + StandardScaler)
 │   │   ├── regression.py            # [Dev 3] Treinamento e predição de produtividade (sc/ha)
@@ -48,7 +48,7 @@ backend/
 ├── tests/
 │   ├── conftest.py                  # [Dev 2 - CONCLUÍDO] Injeta backend no sys.path do pytest
 │   ├── test_data.py                 # [Dev 2 - CONCLUÍDO] 17 testes automatizados de dados
-│   ├── test_regression.py           # [Dev 3 - PENDENTE] Testes unitários de regressão
+│   ├── test_regression.py           # [Dev 3 - IMPLEMENTADO] Testes unitários de regressão
 │   ├── test_classification.py       # [Dev 4 - PENDENTE] Testes unitários de classificação
 │   └── test_api.py                  # [Dev 5 - PENDENTE] Testes de integração HTTP
 ├── requirements.txt                 # [Dev 2 - CONCLUÍDO] Dependências oficiais
@@ -89,57 +89,17 @@ python -m pytest backend/tests/test_data.py -v
 
 ---
 
-### DEV 3 — Regressão de Produtividade (`scikit-learn`)
+### DEV 3 — Regressão de Produtividade (implementado)
 
-* **Objetivo:** Treinar, avaliar e persistir os estimadores para prever `produtividade_sc_ha` (sacas/ha).
-* **Arquivos a criar:**
-  1. `backend/app/ml/preprocessing.py`
-  2. `backend/app/ml/regression.py`
-  3. `backend/tests/test_regression.py`
+O módulo está em `app/ml/regression.py`, com pré-processamento compartilhado em `app/ml/preprocessing.py` e testes em `tests/test_regression.py`.
 
-#### 1. Consumo dos Dados do Dev 2:
-```python
-from app.data import load_dataset, validate_dataset
+Consulte o [guia da entrega do Dev 3](../docs/entrega_dev3.md) para treinar, avaliar, salvar e carregar os modelos. O guia explica as métricas, as limitações dos dados sintéticos e a integração com o registro do Dev 5.
 
-df = validate_dataset(load_dataset("data/examples/safra_soja_favoravel.csv"))
-features = ["area_hectares", "precipitacao_mm", "temperatura_media", "umidade_solo_pct", "ph_solo", "teor_argila_pct", "cultura"]
-X = df[features]
-y = df["produtividade_sc_ha"]
-```
+`train_regression` retorna um artefato com o pipeline ajustado e os metadados. Sua propriedade `result` segue o contrato `TrainingResult`; `baseline_metrics` guarda a comparação com a média do treino. Use `save_regression` e `load_regression` para persistência, preservando o vínculo entre base, modelo e configuração. O modelo corresponde à configuração solicitada, sem escolher hiperparâmetros pelo teste.
 
-#### 2. Pipeline sem Vazamento de Dados (*Data Leakage*):
-* Realizar `train_test_split(X, y, test_size=0.2, random_state=42)` **antes** de qualquer ajuste.
-* Construir um `Pipeline` encadeando `ColumnTransformer`:
-  * Categórica (`cultura`): `OneHotEncoder(handle_unknown="ignore")`.
-  * Numéricas (6 variáveis): `StandardScaler()` (essencial para KNN).
-* Modelos a suportar com os hiperparâmetros da requisição:
-  * `RandomForestRegressor(n_estimators, max_depth, min_samples_split, random_state=42)`
-  * `DecisionTreeRegressor(max_depth, criterion, random_state=42)`
-  * `KNeighborsRegressor(n_neighbors, weights, metric)`
-  * *Baseline de comparação:* `DummyRegressor(strategy="mean")`.
-
-#### 3. Métricas e Auditoria no Conjunto de Teste:
-* Calcular:
-  * $\text{MAE} = \frac{1}{n}\sum |y - \hat{y}|$
-  * $\text{RMSE} = \sqrt{\frac{1}{n}\sum (y - \hat{y})^2}$
-  * $R^2 = 1 - \frac{\sum (y - \hat{y})^2}{\sum (y - \bar{y})^2}$
-* Montar a lista de auditoria `test_samples`:
-  ```python
-  test_samples = [
-      {"talhao_id": tid, "real": float(real), "previsto": round(float(prev), 2)}
-      for tid, real, prev in zip(test_df["talhao_id"], y_test, y_pred)
-  ]
-  ```
-
-#### 4. Persistência do Melhor Modelo com `joblib`:
-Para cumprir a exigência do professor de **não treinar do zero na aula**:
-```python
-import joblib
-joblib.dump(melhor_pipeline_regressao, "backend/app/models/modelo_produtividade.joblib")
-```
+A previsão usa `predict_regression`, sem novo ajuste, e verifica cultura, limites numéricos e identidade da base. O servidor HTTP ainda depende do Dev 5.
 
 ---
-
 ### DEV 4 — Classificação de Risco de Quebra (`scikit-learn`)
 
 * **Objetivo:** Prever a classe de risco de quebra da safra (`risco_quebra`: `"Baixo"`, `"Moderado"` ou `"Alto"`).
@@ -205,6 +165,7 @@ CORS(app, origins=["http://127.0.0.1:5173", "http://localhost:5173"])
 Para atender à orientação do professor, carregar os modelos salvos em disco **imediatamente na inicialização**:
 ```python
 import joblib
+from app.ml.regression import load_regression
 from pathlib import Path
 
 class ModelRegistry:
@@ -214,10 +175,11 @@ class ModelRegistry:
         # Carrega os modelos pré-treinados em disco
         models_dir = Path(__file__).resolve().parent.parent / "models"
         if (models_dir / "modelo_produtividade.joblib").exists():
-            self.models["reg-default"] = {
-                "pipeline": joblib.load(models_dir / "modelo_produtividade.joblib"),
+            artifact = load_regression(models_dir / "modelo_produtividade.joblib")
+            self.models[artifact.result["model_id"]] = {
+                "artifact": artifact,
                 "task": "regressao",
-                "dataset_id": "default"
+                "dataset_id": artifact.result["dataset_id"]
             }
         if (models_dir / "modelo_risco.joblib").exists():
             self.models["clf-default"] = {
@@ -256,3 +218,6 @@ Assim que o Dev 5 finalizar os endpoints:
    npm run dev
    ```
 4. Abra **[http://127.0.0.1:5173](http://127.0.0.1:5173)**. A interface indicará **"Modo API Real"** e operará diretamente sobre o back-end Python.
+
+
+Entrega do Dev 3: consulte o [guia de regressão](../docs/entrega_dev3.md). O módulo Python está implementado; a integração HTTP depende do Dev 5. O artefato joblib contém pipeline e metadados e deve ser carregado com `load_regression`.
