@@ -30,13 +30,13 @@ A arquitetura já permite trocar o serviço mockado pelo cliente HTTP. Essa troc
 
 Fernando assume o Dev 1. Os papéis dos Devs 2–5 ainda não têm nomes atribuídos neste documento. A divisão abaixo define entregas e responsabilidades; os caminhos do back-end são sugestões de organização e **ainda não representam arquivos implementados**.
 
-| Dev | Frente principal | Entrega para o grupo | Depende de |
-| --- | --- | --- | --- |
-| **1 — Fernando** | Base, componentes React, mocks e integração da interface | Front executável sem Python, tipos e contrato para o back-end | Contrato alinhado com Dev 5 |
-| **2** | Dados, importação e validação | Base normalizada e relatório de qualidade para os modelos e a API | Esquema de 13 colunas |
-| **3** | Regressão de produtividade | Pipeline de regressão, métricas e inferência | Dados do Dev 2 |
-| **4** | Classificação de risco | Pipeline de classificação, matriz e inferência | Dados do Dev 2; pré-processamento alinhado com Dev 3 |
-| **5** | API Python e integração do back-end | Rotas HTTP que conectam as entregas dos Devs 2–4 | Contrato e funções de dados/modelos |
+| Dev | Frente principal | Entrega para o grupo | Status | Depende de |
+| :---: | :--- | :--- | :---: | --- |
+| **1 — Fernando** | Base, componentes React, mocks e integração da interface | Front executável sem Python, tipos e contrato para o back-end | Concluído (Front) | Contrato alinhado com Dev 5 |
+| **2** | Dados, importação e validação | Ingestão CSV/JSON/XML, validação 13 colunas, 4 bases e 17 testes | **Concluído [x]** | Esquema de 13 colunas |
+| **3** | Regressão de produtividade | Pipeline de regressão, métricas, persistência joblib e inferência | Pendente [ ] | Dados do Dev 2 |
+| **4** | Classificação de risco | Pipeline de classificação, matriz 3x3, probabilidades e joblib | Pendente [ ] | Dados do Dev 2; pré-processamento alinhado com Dev 3 |
+| **5** | API Python e integração do back-end | Servidor Flask REST, rotas HTTP e registro de modelos pré-carregados | Pendente [ ] | Contrato e funções de dados/modelos |
 
 Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os módulos no servidor; o Dev 1 conecta a interface ao servidor. Alterações no contrato precisam ser combinadas entre as duas frentes e refletidas nos tipos, validadores e exemplos.
 
@@ -65,22 +65,24 @@ Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os 
 
 **Critério de conclusão:** a interface deve continuar funcionando em modo mock e também realizar upload → treino → previsão em modo real, sem apresentar dados simulados como resultados reais.
 
-### Dev 2 — dados, ingestão e qualidade
+### Dev 2 — dados, ingestão e qualidade (Concluído [x])
 
 **Responsabilidade:** entregar dados confiáveis aos modelos e ao servidor.
 
-**Área sugerida:** `backend/app/data/`, testes de ingestão em `backend/tests/` e bases em `data/examples/`.
+**Área implementada:** `backend/app/data/`, testes em `backend/tests/test_data.py` e bases acadêmicas em `data/examples/`.
 
-**Tarefas:**
+**Tarefas concluídas:**
 
-- [ ] Implementar leitura de CSV, JSON e XML no Python, normalizando os três formatos para a mesma estrutura tabular.
-- [ ] Validar as 13 colunas, tipos, limites físicos, IDs únicos e classes/culturas aceitas.
-- [ ] Reproduzir no servidor os limites de 2 MB e 10.000 registros. A validação do navegador não substitui a do back-end.
-- [ ] Rejeitar arquivos vazios, corrompidos ou incompatíveis com mensagens úteis, sem sobrescrever a base válida anterior.
-- [ ] No XML, rejeitar DTD, entidades, atributos e elementos aninhados fora do esquema.
-- [ ] Retornar dados normalizados, resumo e relatório de validação para o Dev 5 montar o envelope `Dataset`.
-- [ ] Documentar origem, unidades, ausentes, exclusões e simplificações dos dados. Manter exemplos sintéticos identificados.
-- [ ] Testar os três formatos com casos válidos e inválidos.
+- [x] Implementar leitura de CSV, JSON e XML no Python, normalizando os três formatos para a mesma estrutura tabular (`backend/app/data/loader.py`).
+- [x] Validar as 13 colunas, tipos, limites físicos, IDs únicos e classes/culturas aceitas (`backend/app/data/validator.py`).
+- [x] Reproduzir no servidor os limites de 2 MB e 10.000 registros com rejeição imediata.
+- [x] Rejeitar arquivos vazios, corrompidos ou incompatíveis com mensagens claras e estruturadas em exceções de domínio.
+- [x] No XML, rejeitar DTD, entidades (XXE), atributos e elementos aninhados com `defusedxml`.
+- [x] Retornar dados normalizados, resumo estatístico e envelope compatível com `Dataset` (`mode: "real"`).
+- [x] Gerar e documentar 4 bases de teste acadêmico com variação edafoclimática (`safra_soja_favoravel.csv`, `safra_milho_seca_severa.json`, `safra_algodao_cerrado.xml`, `safra_mista_sul.csv`).
+- [x] Testar os três formatos com 17 testes automatizados aprovados no pytest (100% green).
+
+*Consulte as instruções detalhadas e próximos passos dos Devs 3, 4 e 5 no documento [`backend/README.md`](file:///c:/Users/kinha/OneDrive/Área%20de%20Trabalho/topicos%20software/ML_AGROSENSE/backend/README.md).*
 
 **Entrega aos outros devs:** registros normalizados para a API e dados tabulares para regressão/classificação, com esquema e regras de limpeza explícitos. A imputação aprendida deve ocorrer dentro dos pipelines de treino dos Devs 3 e 4, depois da divisão treino/teste.
 

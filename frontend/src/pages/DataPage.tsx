@@ -1,7 +1,17 @@
 import { useMemo, useState } from "react";
-import { CheckCircle2, FileSpreadsheet } from "lucide-react";
+import { BarChart3, CheckCircle2, FileSpreadsheet, TrendingUp } from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Cell,
+} from "recharts";
 import type { Dataset, TalhaoRecord } from "../types";
-import { columns as schemaColumns, format } from "../lib/domain";
+import { columns as schemaColumns, CROPS, format } from "../lib/domain";
 import { Empty, Panel, RiskBadge } from "../components/common";
 import { DatasetUpload } from "../components/datasets/DatasetUpload";
 import { SearchField } from "../components/forms/SearchField";
@@ -46,7 +56,9 @@ const tableColumns: TableColumn<TalhaoRecord>[] = [
     render: (record) => <RiskBadge risk={record.risco_quebra} />,
   },
 ];
+
 const PAGE_SIZE = 10;
+
 export default function DataPage({
   data,
   onUpload,
@@ -62,6 +74,56 @@ export default function DataPage({
     key: "talhao_id",
     asc: true,
   });
+
+  // Agregações em médias por município
+  const cityAverages = useMemo(() => {
+    if (!data.records.length) return [];
+    const grouped: Record<
+      string,
+      { count: number; sumProd: number; sumChuva: number; sumArea: number }
+    > = {};
+    for (const r of data.records) {
+      if (!grouped[r.municipio]) {
+        grouped[r.municipio] = { count: 0, sumProd: 0, sumChuva: 0, sumArea: 0 };
+      }
+      grouped[r.municipio].count++;
+      grouped[r.municipio].sumProd += r.produtividade_sc_ha;
+      grouped[r.municipio].sumChuva += r.precipitacao_mm;
+      grouped[r.municipio].sumArea += r.area_hectares;
+    }
+    return Object.entries(grouped)
+      .map(([municipio, stats]) => ({
+        municipio,
+        mediaProdutividade: Number((stats.sumProd / stats.count).toFixed(1)),
+        mediaArea: Number((stats.sumArea / stats.count).toFixed(1)),
+        mediaChuva: Number((stats.sumChuva / stats.count).toFixed(0)),
+        talhoes: stats.count,
+      }))
+      .sort((a, b) => b.mediaProdutividade - a.mediaProdutividade);
+  }, [data.records]);
+
+  // Agregações em médias por cultura
+  const cropAverages = useMemo(() => {
+    if (!data.records.length) return [];
+    return CROPS.map((c) => {
+      const subset = data.records.filter((r) => r.cultura === c);
+      if (!subset.length) return null;
+      const sumProd = subset.reduce((acc, r) => acc + r.produtividade_sc_ha, 0);
+      const sumArea = subset.reduce((acc, r) => acc + r.area_hectares, 0);
+      return {
+        cultura: c,
+        mediaProdutividade: Number((sumProd / subset.length).toFixed(1)),
+        mediaArea: Number((sumArea / subset.length).toFixed(1)),
+        talhoes: subset.length,
+      };
+    }).filter(Boolean) as {
+      cultura: string;
+      mediaProdutividade: number;
+      mediaArea: number;
+      talhoes: number;
+    }[];
+  }, [data.records]);
+
   const rows = useMemo(
     () =>
       data.records
@@ -83,13 +145,127 @@ export default function DataPage({
         }),
     [data, search, sort],
   );
+
   const current = Math.min(
     page,
     Math.max(0, Math.ceil(rows.length / PAGE_SIZE) - 1),
   );
+
   return (
     <>
       <DatasetUpload onUpload={onUpload} busy={busy} />
+
+      {/* Painel de Visualizações em Médias dos Talhões */}
+      {data.records.length > 0 && (
+        <Panel
+          eyebrow="PANORAMA AGREGADO EM MÉDIAS"
+          title="Médias por Região e Cultura"
+          description="Visão resumida das médias da base para identificar rapidamente o comportamento regional sem depender da tabela extensa."
+          className="averages-panel"
+        >
+          <div className="averages-grid">
+            <div className="chart-card-inner">
+              <h3 className="chart-subheading">
+                <BarChart3 size={15} /> Produtividade Média por Município (sc/ha)
+              </h3>
+              <div className="chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={cityAverages}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 25 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaf0e2" />
+                    <XAxis
+                      dataKey="municipio"
+                      tickLine={false}
+                      axisLine={false}
+                      interval={0}
+                      angle={-15}
+                      textAnchor="end"
+                      height={40}
+                    />
+                    <YAxis tickLine={false} axisLine={false} />
+                    <Tooltip
+                      formatter={(v: unknown) => [
+                        `${format(Number(v), 1)} sc/ha`,
+                        "Produtividade Média",
+                      ]}
+                    />
+                    <Bar
+                      dataKey="mediaProdutividade"
+                      fill="#447b5a"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={45}
+                    >
+                      {cityAverages.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={index === 0 ? "#2d6a4f" : "#52b788"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="footnote">
+                Líder regional: <strong>{cityAverages[0]?.municipio}</strong> com média de{" "}
+                {format(cityAverages[0]?.mediaProdutividade, 1)} sc/ha ({cityAverages[0]?.talhoes}{" "}
+                talhões).
+              </p>
+            </div>
+
+            <div className="chart-card-inner">
+              <h3 className="chart-subheading">
+                <TrendingUp size={15} /> Produtividade e Área Médias por Cultura
+              </h3>
+              <div className="chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={cropAverages}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaf0e2" />
+                    <XAxis dataKey="cultura" tickLine={false} axisLine={false} />
+                    <YAxis tickLine={false} axisLine={false} />
+                    <Tooltip
+                      formatter={(v: unknown, name: unknown) => [
+                        name === "Produtividade (sc/ha)"
+                          ? `${format(Number(v), 1)} sc/ha`
+                          : `${format(Number(v), 1)} ha`,
+                        String(name),
+                      ]}
+                    />
+                    <Bar
+                      dataKey="mediaProdutividade"
+                      name="Produtividade (sc/ha)"
+                      fill="#447b5a"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={38}
+                    />
+                    <Bar
+                      dataKey="mediaArea"
+                      name="Área Média (ha)"
+                      fill="#88a669"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={38}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="footnote">
+                {cropAverages
+                  .map(
+                    (c) =>
+                      `${c.cultura}: ${format(c.mediaProdutividade, 1)} sc/ha (área média: ${format(c.mediaArea, 0)} ha)`,
+                  )
+                  .join(" · ")}
+              </p>
+            </div>
+          </div>
+        </Panel>
+      )}
+
+      {/* Painel da Tabela Detalhada com Busca e Paginação */}
       <Panel
         eyebrow="SUA BASE EM DETALHES"
         title={
@@ -150,6 +326,7 @@ export default function DataPage({
           </Empty>
         )}
       </Panel>
+
       <section className="schema-strip">
         <CheckCircle2 size={17} />
         <p>

@@ -1,27 +1,258 @@
-# Back-end AgroSense — implementação da equipe
+# Back-end AgroSense — Guia Completo de Implementação e Integração (Devs 2 a 5)
 
-A entrega atual do Dev 1 implementa o front-end e o contrato mockado. Esta pasta reserva o espaço do back-end Python, ainda sem API, modelos ou dependências instaladas.
+Este documento é o guia definitivo de execução técnica para o desenvolvimento do back-end em Python do projeto **AgroSense**, da disciplina **Tópicos Especiais em Software** (Prof. **Rhafael Freitas Da Costa**).
 
-| Dev | Entrega | Área sugerida |
-| --- | --- | --- |
-| 2 | CSV/JSON/XML, validação do esquema e relatório de dados | `app/data/`, `tests/` |
-| 3 | Pipeline de regressão, baseline, MAE/RMSE/R² e inferência | `app/ml/regression.py`, `tests/` |
-| 4 | Pipeline de classificação, métricas, matriz e inferência | `app/ml/classification.py`, `tests/` |
-| 5 | API Python, registro de bases e modelos, treinamento e integração | `app/routes/`, `app/services/`, inicialização |
+---
 
-Implementar o [contrato v1.0](../docs/contrato_api.md). Base prevista: `http://localhost:8000/api`. Flask é a proposta de framework; a equipe pode alterar o framework preservando o contrato HTTP.
+## 1. Status Geral de Entregas da Equipe
 
-O front encontra seus dados via `AgroService` em `frontend/src/types/index.ts`. Para integrar, configurar `VITE_USE_MOCK=false`, definir a URL da API e reiniciar o Vite. Habilitar CORS para as duas origens locais indicadas no contrato.
+| Dev | Frente Principal | Entregáveis para o Projeto | Status |
+| :---: | :--- | :--- | :---: |
+| **Dev 1** | **Interface React & Mocks** | Front-end SPA completo, mapa Leaflet, gráficos Recharts, contratos TypeScript e simulador | **Concluído [x]** |
+| **Dev 2** | **Dados, Ingestão & Qualidade** | Ingestão de CSV/JSON/XML, validação estrita das 13 colunas, 4 bases acadêmicas e 17 testes | **Concluído [x]** |
+| **Dev 3** | **Regressão de Produtividade** | Pipelines `scikit-learn`, baseline, métricas (MAE/RMSE/$R^2$) e persistência `.joblib` | **Pendente [ ]** |
+| **Dev 4** | **Classificação de Risco** | Pipelines `scikit-learn`, matriz de confusão $3 \times 3$, probabilidades e persistência `.joblib` | **Pendente [ ]** |
+| **Dev 5** | **API Flask & Integração** | Servidor REST, rotas `/health`, `/data`, `/upload`, `/model/train`, `/predict` e CORS | **Pendente [ ]** |
 
-Critérios de integração:
+---
 
-- [ ] Rotas `/health`, `/data`, `/upload`, `/model/train` e `/predict` implementadas.
-- [ ] Respostas iguais aos envelopes tipados, com `mode: "real"`.
-- [ ] Modelos identificados por tarefa, versão e dataset.
-- [ ] Pré-processamento ajustado somente no treino e reutilizado na inferência.
-- [ ] Os dois alvos excluídos das features, inclusive quando apenas um é previsto.
-- [ ] Métricas conciliadas com as amostras de teste e a matriz de confusão.
-- [ ] Erros do contrato testados, sem sobrescrever estado válido em caso de falha.
-- [ ] Dependências, geração de dados e execução documentadas.
+## 2. Estrutura Modular de Arquivos em `backend/`
 
-Os exemplos em `../data/examples/` são sintéticos e reproduzíveis pelo comando `pnpm examples` no front. Fórmulas e rótulos são didáticos, sem comprovação de validade agronômica.
+```text
+backend/
+├── app/
+│   ├── __init__.py                  # Pacote app
+│   ├── main.py                      # [Dev 5] Servidor Flask, CORS e inicialização na porta 8000
+│   ├── data/                        # [Dev 2 - CONCLUÍDO] Ingestão e validação
+│   │   ├── __init__.py              # Exporta load_dataset, validate_dataset, create_dataset_envelope
+│   │   ├── loader.py                # Leitura e normalização de CSV, JSON e XML seguro
+│   │   ├── validator.py             # Validação das 13 colunas, limites físicos e resumo
+│   │   └── generate_diverse_datasets.py # Gerador dos 4 cenários de teste acadêmico
+│   ├── ml/                          # [Devs 3 e 4 - PENDENTE] Machine Learning
+│   │   ├── __init__.py
+│   │   ├── preprocessing.py         # Pipeline de pré-processamento (OneHotEncoder + StandardScaler)
+│   │   ├── regression.py            # [Dev 3] Treinamento e predição de produtividade (sc/ha)
+│   │   └── classification.py        # [Dev 4] Treinamento e predição de risco de quebra
+│   ├── models/                      # [Devs 3 e 4] Artefatos binários persistidos (.joblib)
+│   │   ├── modelo_produtividade.joblib
+│   │   └── modelo_risco.joblib
+│   ├── services/                    # [Dev 5 - PENDENTE] Gerenciamento de estado
+│   │   ├── __init__.py
+│   │   └── model_registry.py        # Mapeamento e cache de dataset_id e model_id em memória
+│   └── routes/                      # [Dev 5 - PENDENTE] Endpoints REST da API
+│       ├── __init__.py
+│       ├── health.py                # GET /api/health
+│       ├── data.py                  # GET /api/data e POST /api/upload
+│       ├── train.py                 # POST /api/model/train
+│       └── predict.py               # POST /api/predict
+├── tests/
+│   ├── conftest.py                  # [Dev 2 - CONCLUÍDO] Injeta backend no sys.path do pytest
+│   ├── test_data.py                 # [Dev 2 - CONCLUÍDO] 17 testes automatizados de dados
+│   ├── test_regression.py           # [Dev 3 - PENDENTE] Testes unitários de regressão
+│   ├── test_classification.py       # [Dev 4 - PENDENTE] Testes unitários de classificação
+│   └── test_api.py                  # [Dev 5 - PENDENTE] Testes de integração HTTP
+├── requirements.txt                 # [Dev 2 - CONCLUÍDO] Dependências oficiais
+└── README.md                        # Este guia
+```
+
+---
+
+## 3. O que foi feito pelo Dev 2 (Mapeamento e Instruções de Verificação)
+
+O **Dev 2** entregou a fundação de dados confiável para todo o projeto.
+
+### Arquivos e Módulos Criados:
+1. **[`app/data/loader.py`](app/data/loader.py):**
+   * Funções `load_csv()`, `load_json()`, `load_xml()` e `load_dataset()`.
+   * Suporte a arquivos em disco, strings decodificadas e fluxos binários de upload (`BytesIO`).
+   * **Segurança contra XXE:** Bloqueio preventivo de `<!DOCTYPE` e `<!ENTITY` com `defusedxml`.
+2. **[`app/data/validator.py`](app/data/validator.py):**
+   * Função `validate_dataset(df)`: Valida presença estrita das 13 colunas, unicidade de `talhao_id`, ausência de valores nulos e limites físicos de cada variável.
+   * Função `calculate_summary(df)`: Gera os totais de talhões, área somada, médias e contagens por cultura e risco.
+   * Função `create_dataset_envelope(df, filename)`: Gera o hash determinístico SHA-256 (`ds-<hash>`) e monta o JSON compatível com o tipo `Dataset` do front-end com `mode: "real"`.
+3. **Bases Diversas em [`../data/examples/`](../data/examples/):**
+   * `safra_soja_favoravel.csv`: Safra ideal de alta produtividade (75–90 sc/ha) e risco Baixo.
+   * `safra_milho_seca_severa.json`: Anomalia climática crítica (El Niño, chuva < 340 mm, risco Alto).
+   * `safra_algodao_cerrado.xml`: Solos arenosos do Cerrado (argila 16–26%, pH ácido).
+   * `safra_mista_sul.csv`: Clima ameno da Região Sul (17,5–22,5 °C) com Soja e Milho.
+
+### Como Executar os Testes do Dev 2:
+```powershell
+# Na raiz do repositório ou na pasta backend
+python -m pytest backend/tests/test_data.py -v
+```
+*Resultado obtido:* **17 testes aprovados em menos de 1 segundo (100% green)**.
+
+---
+
+## 4. Instruções Passo a Passo para os Desenvolvedores Restantes
+
+---
+
+### DEV 3 — Regressão de Produtividade (`scikit-learn`)
+
+* **Objetivo:** Treinar, avaliar e persistir os estimadores para prever `produtividade_sc_ha` (sacas/ha).
+* **Arquivos a criar:**
+  1. `backend/app/ml/preprocessing.py`
+  2. `backend/app/ml/regression.py`
+  3. `backend/tests/test_regression.py`
+
+#### 1. Consumo dos Dados do Dev 2:
+```python
+from app.data import load_dataset, validate_dataset
+
+df = validate_dataset(load_dataset("data/examples/safra_soja_favoravel.csv"))
+features = ["area_hectares", "precipitacao_mm", "temperatura_media", "umidade_solo_pct", "ph_solo", "teor_argila_pct", "cultura"]
+X = df[features]
+y = df["produtividade_sc_ha"]
+```
+
+#### 2. Pipeline sem Vazamento de Dados (*Data Leakage*):
+* Realizar `train_test_split(X, y, test_size=0.2, random_state=42)` **antes** de qualquer ajuste.
+* Construir um `Pipeline` encadeando `ColumnTransformer`:
+  * Categórica (`cultura`): `OneHotEncoder(handle_unknown="ignore")`.
+  * Numéricas (6 variáveis): `StandardScaler()` (essencial para KNN).
+* Modelos a suportar com os hiperparâmetros da requisição:
+  * `RandomForestRegressor(n_estimators, max_depth, min_samples_split, random_state=42)`
+  * `DecisionTreeRegressor(max_depth, criterion, random_state=42)`
+  * `KNeighborsRegressor(n_neighbors, weights, metric)`
+  * *Baseline de comparação:* `DummyRegressor(strategy="mean")`.
+
+#### 3. Métricas e Auditoria no Conjunto de Teste:
+* Calcular:
+  * $\text{MAE} = \frac{1}{n}\sum |y - \hat{y}|$
+  * $\text{RMSE} = \sqrt{\frac{1}{n}\sum (y - \hat{y})^2}$
+  * $R^2 = 1 - \frac{\sum (y - \hat{y})^2}{\sum (y - \bar{y})^2}$
+* Montar a lista de auditoria `test_samples`:
+  ```python
+  test_samples = [
+      {"talhao_id": tid, "real": float(real), "previsto": round(float(prev), 2)}
+      for tid, real, prev in zip(test_df["talhao_id"], y_test, y_pred)
+  ]
+  ```
+
+#### 4. Persistência do Melhor Modelo com `joblib`:
+Para cumprir a exigência do professor de **não treinar do zero na aula**:
+```python
+import joblib
+joblib.dump(melhor_pipeline_regressao, "backend/app/models/modelo_produtividade.joblib")
+```
+
+---
+
+### DEV 4 — Classificação de Risco de Quebra (`scikit-learn`)
+
+* **Objetivo:** Prever a classe de risco de quebra da safra (`risco_quebra`: `"Baixo"`, `"Moderado"` ou `"Alto"`).
+* **Arquivos a criar:**
+  1. `backend/app/ml/classification.py`
+  2. `backend/tests/test_classification.py`
+
+#### 1. Divisão Estratificada:
+```python
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y_risco, test_size=0.2, stratify=y_risco, random_state=42
+)
+```
+
+#### 2. Estimadores Selecionáveis:
+* `RandomForestClassifier(n_estimators, max_depth, min_samples_split, random_state=42)`
+* `DecisionTreeClassifier(max_depth, criterion="gini"|"entropy", random_state=42)`
+* `KNeighborsClassifier(n_neighbors, weights, metric)`
+
+#### 3. Matriz de Confusão e Probabilidades:
+* Classes na ordem estrita do contrato: `classes = ["Baixo", "Moderado", "Alto"]`.
+* Gerar matriz de confusão:
+  ```python
+  from sklearn.metrics import confusion_matrix
+  cm = confusion_matrix(y_test, y_pred, labels=classes).tolist()
+  ```
+  *Atenção:* A soma total de `cm` deve ser igual a `len(y_test)` e a acurácia calculada deve ser rigorosamente igual a $\frac{\text{diagonal}}{\text{total}}$.
+* Probabilidades com `predict_proba`: mapa `{"Baixo": p0, "Moderado": p1, "Alto": p2}` onde a soma é exatamente $1{,}0$.
+
+#### 4. Persistência do Melhor Modelo:
+```python
+import joblib
+joblib.dump(melhor_pipeline_classificacao, "backend/app/models/modelo_risco.joblib")
+```
+
+---
+
+### DEV 5 — API Python Flask, Registro de Modelos e Integração
+
+* **Objetivo:** Orquestrar os módulos dos Devs 2, 3 e 4 em um servidor HTTP REST executável na porta `8000`.
+* **Arquivos a criar:**
+  1. `backend/app/main.py`
+  2. `backend/app/services/model_registry.py`
+  3. `backend/app/routes/health.py`
+  4. `backend/app/routes/data.py`
+  5. `backend/app/routes/train.py`
+  6. `backend/app/routes/predict.py`
+  7. `backend/tests/test_api.py`
+
+#### 1. Configuração do Servidor e CORS (`main.py`):
+```python
+from flask import Flask
+from flask_cors import CORS
+
+app = Flask(__name__)
+# Habilitar CORS para o front-end Vite
+CORS(app, origins=["http://127.0.0.1:5173", "http://localhost:5173"])
+```
+
+#### 2. Registro em Memória Pré-carregado (`model_registry.py`):
+Para atender à orientação do professor, carregar os modelos salvos em disco **imediatamente na inicialização**:
+```python
+import joblib
+from pathlib import Path
+
+class ModelRegistry:
+    def __init__(self):
+        self.datasets = {}
+        self.models = {}
+        # Carrega os modelos pré-treinados em disco
+        models_dir = Path(__file__).resolve().parent.parent / "models"
+        if (models_dir / "modelo_produtividade.joblib").exists():
+            self.models["reg-default"] = {
+                "pipeline": joblib.load(models_dir / "modelo_produtividade.joblib"),
+                "task": "regressao",
+                "dataset_id": "default"
+            }
+        if (models_dir / "modelo_risco.joblib").exists():
+            self.models["clf-default"] = {
+                "pipeline": joblib.load(models_dir / "modelo_risco.joblib"),
+                "task": "classificacao",
+                "dataset_id": "default"
+            }
+```
+
+#### 3. Rotas a Implementar Conforme o Contrato:
+* **`GET /api/health`:** Retorna `{"status": "ok", "contract_version": "1.0"}`.
+* **`GET /api/data?dataset_id=...`:** Retorna o envelope `Dataset` gerado pelo Dev 2.
+* **`POST /api/upload`:** Recebe arquivo no campo `file`, valida com `validate_dataset(load_dataset(file, filename))` e retorna o novo `Dataset`.
+* **`POST /api/model/train`:** Executa treino dinâmico sob demanda caso o usuário clique na interface, gerando novo `model_id`.
+* **`POST /api/predict`:** Recebe os dados de um talhão, executa inferência usando os pipelines do registro e retorna `produtividade_estimada_sc_ha`, `risco_predito` e `probabilidades`.
+
+---
+
+## 5. Como o Dev 1 Conectará o Front-End à API Real
+
+Assim que o Dev 5 finalizar os endpoints:
+
+1. No front-end, crie ou altere o arquivo `frontend/.env.local`:
+   ```ini
+   VITE_USE_MOCK=false
+   VITE_API_URL=http://localhost:8000/api
+   ```
+2. Inicie a API Python na porta 8000:
+   ```powershell
+   cd backend
+   python app/main.py
+   ```
+3. Reinicie o front-end:
+   ```powershell
+   cd frontend
+   npm run dev
+   ```
+4. Abra **[http://127.0.0.1:5173](http://127.0.0.1:5173)**. A interface indicará **"Modo API Real"** e operará diretamente sobre o back-end Python.

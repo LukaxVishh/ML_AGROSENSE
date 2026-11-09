@@ -137,7 +137,8 @@ export const mockService: AgroService = {
       ],
     };
     for (const [task, id] of Object.entries(request.model_ids)) {
-      const model = models.get(id!);
+      if (!id) continue;
+      const model = models.get(id);
       if (
         !model ||
         model.dataset_id !== request.dataset_id ||
