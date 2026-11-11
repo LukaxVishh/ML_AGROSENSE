@@ -35,7 +35,7 @@ Fernando assume o Dev 1. Os papéis dos Devs 2–5 ainda não têm nomes atribu�
 | **1 — Fernando** | Base, componentes React, mocks e integração da interface | Front executável sem Python, tipos e contrato para o back-end | Concluído (Front) | Contrato alinhado com Dev 5 |
 | **2** | Dados, importação e validação | Ingestão CSV/JSON/XML, validação 13 colunas, 4 bases e 17 testes | **Concluído [x]** | Esquema de 13 colunas |
 | **3** | Regressão de produtividade | Pipeline de regressão, métricas, persistência joblib e inferência | Implementado (módulo Python) | Dados do Dev 2 |
-| **4** | Classificação de risco | Pipeline de classificação, matriz 3x3, probabilidades e joblib | Pendente [ ] | Dados do Dev 2; pré-processamento alinhado com Dev 3 |
+| **4** | Classificação de risco | Pipeline de classificação, matriz 3x3, probabilidades e joblib | Implementado (módulo Python) | Dados do Dev 2; pré-processamento alinhado com Dev 3 |
 | **5** | API Python e integração do back-end | Servidor Flask REST, rotas HTTP e registro de modelos pré-carregados | Pendente [ ] | Contrato e funções de dados/modelos |
 
 Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os módulos no servidor; o Dev 1 conecta a interface ao servidor. Alterações no contrato precisam ser combinadas entre as duas frentes e refletidas nos tipos, validadores e exemplos.
@@ -118,18 +118,20 @@ Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os 
 
 **Tarefas:**
 
-- [ ] Alinhar o pré-processamento com o Dev 3, mantendo pipelines ajustados separadamente por tarefa.
-- [ ] Excluir os dois alvos e os identificadores das features.
-- [ ] Implementar Random Forest, Árvore de Decisão e KNN para classificação.
-- [ ] Validar critérios e hiperparâmetros específicos de classificação; não reutilizar critérios de regressão em árvores classificadoras.
-- [ ] Verificar suporte das classes antes do split e da avaliação; usar estratificação quando viável.
-- [ ] Calcular acurácia, F1 ponderado, precisão e recall ponderados.
-- [ ] Gerar matriz de confusão e auditoria do mesmo teste, com ordem explícita das classes.
-- [ ] Retornar probabilidades somente quando calculadas pelo classificador; caso contrário, retornar `null`.
-- [ ] Testar classes ausentes, amostras insuficientes, categorias desconhecidas e inferência.
-- [ ] Documentar que aprender os rótulos sintéticos atuais não comprova previsão de risco agrícola real.
+- [x] Alinhar o pré-processamento com o Dev 3, mantendo pipelines ajustados separadamente por tarefa.
+- [x] Excluir os dois alvos e os identificadores das features.
+- [x] Implementar Random Forest, Árvore de Decisão e KNN para classificação.
+- [x] Validar critérios e hiperparâmetros específicos de classificação; não reutilizar critérios de regressão em árvores classificadoras.
+- [x] Verificar suporte das classes antes do split e da avaliação; usar estratificação quando viável.
+- [x] Calcular acurácia, F1 ponderado, precisão e recall ponderados.
+- [x] Gerar matriz de confusão e auditoria do mesmo teste, com ordem explícita das classes.
+- [x] Retornar probabilidades somente quando calculadas pelo classificador; caso contrário, retornar `null`.
+- [x] Criar testes para classes ausentes, suporte insuficiente, parâmetros, persistência e inferência.
+- [x] Documentar que aprender os rótulos sintéticos atuais não comprova previsão de risco agrícola real.
 
 **Entrega ao Dev 5:** funções de treino/avaliação e inferência, pipeline ajustado, classes, métricas e auditoria no formato do contrato.
+
+Consulte o [guia de entrega do Dev 4](docs/entrega_dev4.md). O módulo Python está implementado; a integração HTTP depende do Dev 5.
 
 **Critério de conclusão:** a soma da matriz deve corresponder ao tamanho do teste, a acurácia deve corresponder à diagonal e as probabilidades, quando existentes, devem respeitar a ordem das classes e somar 1.
 

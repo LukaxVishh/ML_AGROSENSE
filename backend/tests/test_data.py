@@ -93,6 +93,11 @@ class TestLoader:
         assert "Milho" in df["cultura"].values
         assert "Soja" in df["cultura"].values
 
+    def test_load_dataset_infers_format_for_long_file_content(self):
+        csv_file = EXAMPLES_DIR / "safra_mista_sul.csv"
+        assert len(load_dataset(csv_file)) == 150
+        assert len(load_dataset(csv_file.read_text(encoding="utf-8"))) == 150
+
 
 class TestValidator:
     @pytest.fixture

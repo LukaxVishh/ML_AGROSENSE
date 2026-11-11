@@ -33,9 +33,17 @@ NUMERIC_COLUMNS = {
 
 def _read_content_as_text(source: Union[str, bytes, Path, BinaryIO, TextIO]) -> str:
     """Extrai o conteúdo bruto em string decodificada em UTF-8."""
-    if isinstance(source, (str, Path)) and Path(str(source)).is_file():
-        with open(source, mode="r", encoding="utf-8") as f:
-            return f.read()
+    if isinstance(source, (str, Path)):
+        try:
+            is_file = Path(source).is_file()
+        except (OSError, ValueError):
+            # Uma string pode ser o conteúdo completo, não um nome de arquivo.
+            if isinstance(source, Path):
+                raise
+            is_file = False
+        if is_file:
+            with open(source, mode="r", encoding="utf-8") as f:
+                return f.read()
     if isinstance(source, bytes):
         try:
             return source.decode("utf-8")

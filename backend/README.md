@@ -11,7 +11,7 @@ Este documento é o guia definitivo de execução técnica para o desenvolviment
 | **Dev 1** | **Interface React & Mocks** | Front-end SPA completo, mapa Leaflet, gráficos Recharts, contratos TypeScript e simulador | **Concluído [x]** |
 | **Dev 2** | **Dados, Ingestão & Qualidade** | Ingestão de CSV/JSON/XML, validação estrita das 13 colunas, 4 bases acadêmicas e 17 testes | **Concluído [x]** |
 | **Dev 3** | **Regressão de Produtividade** | Pipelines `scikit-learn`, baseline, métricas (MAE/RMSE/$R^2$) e persistência `.joblib` | **Implementado [x]** |
-| **Dev 4** | **Classificação de Risco** | Pipelines `scikit-learn`, matriz de confusão $3 \times 3$, probabilidades e persistência `.joblib` | **Pendente [ ]** |
+| **Dev 4** | **Classificação de Risco** | Pipelines `scikit-learn`, matriz de confusão $3 \times 3$, probabilidades e persistência `.joblib` | **Implementado [x]** |
 | **Dev 5** | **API Flask & Integração** | Servidor REST, rotas `/health`, `/data`, `/upload`, `/model/train`, `/predict` e CORS | **Pendente [ ]** |
 
 ---
@@ -28,7 +28,7 @@ backend/
 │   │   ├── loader.py                # Leitura e normalização de CSV, JSON e XML seguro
 │   │   ├── validator.py             # Validação das 13 colunas, limites físicos e resumo
 │   │   └── generate_diverse_datasets.py # Gerador dos 4 cenários de teste acadêmico
-│   ├── ml/                          # Dev 3 implementado; Dev 4 pendente
+│   ├── ml/                          # Devs 3 e 4 implementados
 │   │   ├── __init__.py
 │   │   ├── preprocessing.py         # Pipeline de pré-processamento (OneHotEncoder + StandardScaler)
 │   │   ├── regression.py            # [Dev 3] Treinamento e predição de produtividade (sc/ha)
@@ -49,7 +49,7 @@ backend/
 │   ├── conftest.py                  # [Dev 2 - CONCLUÍDO] Injeta backend no sys.path do pytest
 │   ├── test_data.py                 # [Dev 2 - CONCLUÍDO] 17 testes automatizados de dados
 │   ├── test_regression.py           # [Dev 3 - IMPLEMENTADO] Testes unitários de regressão
-│   ├── test_classification.py       # [Dev 4 - PENDENTE] Testes unitários de classificação
+│   ├── test_classification.py       # [Dev 4 - IMPLEMENTADO] Testes unitários de classificação
 │   └── test_api.py                  # [Dev 5 - PENDENTE] Testes de integração HTTP
 ├── requirements.txt                 # [Dev 2 - CONCLUÍDO] Dependências oficiais
 └── README.md                        # Este guia
@@ -100,44 +100,13 @@ Consulte o [guia da entrega do Dev 3](../docs/entrega_dev3.md) para treinar, ava
 A previsão usa `predict_regression`, sem novo ajuste, e verifica cultura, limites numéricos e identidade da base. O servidor HTTP ainda depende do Dev 5.
 
 ---
-### DEV 4 — Classificação de Risco de Quebra (`scikit-learn`)
+### DEV 4 — Classificação de Risco de Quebra (implementado)
 
-* **Objetivo:** Prever a classe de risco de quebra da safra (`risco_quebra`: `"Baixo"`, `"Moderado"` ou `"Alto"`).
-* **Arquivos a criar:**
-  1. `backend/app/ml/classification.py`
-  2. `backend/tests/test_classification.py`
+O módulo está em `app/ml/classification.py`, com pré-processamento compartilhado em `app/ml/preprocessing.py` e testes em `tests/test_classification.py`.
 
-#### 1. Divisão Estratificada:
-```python
-from sklearn.model_selection import train_test_split
+Consulte o [guia da entrega do Dev 4](../docs/entrega_dev4.md) para treinar, avaliar, salvar e carregar modelos. `train_classification` retorna um artefato cujo `result` segue o contrato `TrainingResult`, incluindo matriz de confusão e auditoria do mesmo teste. Use `save_classification` e `load_classification` para persistir o pipeline e os metadados. `predict_classification` infere sem novo ajuste e retorna as probabilidades calculadas pelo classificador.
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y_risco, test_size=0.2, stratify=y_risco, random_state=42
-)
-```
-
-#### 2. Estimadores Selecionáveis:
-* `RandomForestClassifier(n_estimators, max_depth, min_samples_split, random_state=42)`
-* `DecisionTreeClassifier(max_depth, criterion="gini"|"entropy", random_state=42)`
-* `KNeighborsClassifier(n_neighbors, weights, metric)`
-
-#### 3. Matriz de Confusão e Probabilidades:
-* Classes na ordem estrita do contrato: `classes = ["Baixo", "Moderado", "Alto"]`.
-* Gerar matriz de confusão:
-  ```python
-  from sklearn.metrics import confusion_matrix
-  cm = confusion_matrix(y_test, y_pred, labels=classes).tolist()
-  ```
-  *Atenção:* A soma total de `cm` deve ser igual a `len(y_test)` e a acurácia calculada deve ser rigorosamente igual a $\frac{\text{diagonal}}{\text{total}}$.
-* Probabilidades com `predict_proba`: mapa `{"Baixo": p0, "Moderado": p1, "Alto": p2}` onde a soma é exatamente $1{,}0$.
-
-#### 4. Persistência do Melhor Modelo:
-```python
-import joblib
-joblib.dump(melhor_pipeline_classificacao, "backend/app/models/modelo_risco.joblib")
-```
-
----
+Os dados e rótulos atuais são sintéticos, então as métricas não comprovam capacidade de previsão de risco agrícola real. A integração do módulo na API HTTP permanece com o Dev 5.
 
 ### DEV 5 — API Python Flask, Registro de Modelos e Integração
 
