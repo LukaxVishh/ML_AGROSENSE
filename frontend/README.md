@@ -20,7 +20,7 @@ VITE_USE_MOCK=true
 VITE_API_URL=http://localhost:8000/api
 ```
 
-Com `VITE_USE_MOCK=false`, a interface chama a API real e exibe falhas de conexão. Não há fallback automático. O back-end ainda será implementado pela equipe.
+Com `VITE_USE_MOCK=false`, a interface chama a API Flask implementada em `backend/` e exibe falhas de conexão. Não há fallback automático. Consulte o [guia do back-end](../backend/README.md) para iniciar o servidor.
 
 ## Funcionalidades
 

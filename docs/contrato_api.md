@@ -1,6 +1,6 @@
 # AgroSense — contrato de integração v1.0
 
-Este contrato acompanha os tipos de `frontend/src/types/index.ts` e os serviços de `frontend/src/services/`. A interface mock já o utiliza; a API Python permanece a implementar pelos Devs 2–5.
+Este contrato acompanha os tipos de `frontend/src/types/index.ts`, os serviços de `frontend/src/services/` e a API Flask em `backend/app/`. O modo mock e o modo real preservam os mesmos envelopes.
 
 ## Convenções
 
@@ -8,10 +8,11 @@ Este contrato acompanha os tipos de `frontend/src/types/index.ts` e os serviços
 - JSON em UTF-8, campos em `snake_case`, números finitos sem formatação regional.
 - POST JSON usa `Content-Type: application/json`; upload usa `FormData` com campo `file`.
 - CORS local: permitir `http://127.0.0.1:5173` e `http://localhost:5173`.
-- `mode` é `mock` na demonstração e `real` na API futura.
+- `mode` é `mock` na demonstração e `real` na API Flask.
 - `dataset_id` identifica o conteúdo normalizado de uma base; `model_id` identifica um treinamento e sua configuração.
 - Rotas de dados retornam todos os registros no MVP. Busca, ordenação, paginação da tabela e filtros analíticos acontecem no navegador.
-- Mocks e modelos ficam em memória e são perdidos ao recarregar a página. A persistência do back-end deve ser definida pelo Dev 5, sem alterar a correspondência dataset/modelo.
+- O mock é reiniciado ao recarregar a página. No back-end, bases enviadas e modelos treinados ficam em memória compartilhada e são descartados ao reiniciar o processo.
+- Artefatos locais confiáveis em `backend/app/models/` podem ser pré-carregados, sempre preservando a correspondência `dataset_id`/`model_id`.
 
 ## 1. GET /health
 

@@ -1,1 +1,1 @@
-"""AgroSense Back-end Application Package."""
+"""Pacote da API AgroSense."""

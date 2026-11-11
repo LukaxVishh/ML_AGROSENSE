@@ -9,7 +9,7 @@ Aplicação acadêmica para explorar dados agrícolas, visualizar talhões no ma
 | Equipe | Até cinco desenvolvedores |
 | Dev 1 | **Fernando de Araujo Pereira** — base, front-end e mocks |
 | Interface | React + TypeScript + Vite |
-| Back-end planejado | API Python; Flask é a proposta inicial |
+| Back-end | API REST Flask + pipelines scikit-learn |
 
 ## 1. Objetivo e estado atual
 
@@ -17,26 +17,26 @@ O AgroSense reúne quatro áreas da mesma aplicação:
 
 | Área | O que o usuário pode fazer | Estado atual |
 | --- | --- | --- |
-| Dados | Importar CSV/JSON/XML, validar as 13 colunas, buscar, ordenar e paginar os registros | Implementado no front |
-| Dashboard e mapa | Filtrar cultura/município, consultar marcadores e explorar gráficos de barras, rosca, dispersão e correlação | Implementado com dados locais |
-| Machine Learning | Escolher tarefa, algoritmo e hiperparâmetros; consultar métricas e auditoria | Contrato de treinamento simulado |
-| Simulador | Informar condições do talhão e consultar produtividade e/ou classe de risco | Respostas demonstrativas das tarefas treinadas no mock |
+| Dados | Importar CSV/JSON/XML, validar as 13 colunas, buscar, ordenar e paginar os registros | Front local e API real implementados |
+| Dashboard e mapa | Filtrar cultura/município, consultar marcadores e explorar gráficos de barras, rosca, dispersão e correlação | Implementado |
+| Machine Learning | Escolher tarefa, algoritmo e hiperparâmetros; consultar métricas e auditoria | Mock e treinamento real implementados |
+| Simulador | Informar condições do talhão e consultar produtividade e/ou classe de risco | Mock e inferência real implementados |
 
-**A entrega atual é a base do Dev 1.** O front funciona de forma independente, com 300 talhões demonstrativos e importação local de arquivos. Não há treinamento real de estimadores no navegador. A API Python e os modelos reais serão desenvolvidos pelos Devs 2–5.
+O front continua funcionando de forma independente, com 300 talhões demonstrativos e importação local. No modo real, a API Python integra a ingestão, os modelos scikit-learn e a inferência entregues pelos Devs 2–5. Nenhum estimador é treinado no navegador.
 
-A arquitetura já permite trocar o serviço mockado pelo cliente HTTP. Essa troca depende de o back-end implementar o [contrato da API v1.0](docs/contrato_api.md) e passar pelos testes de integração.
+A troca entre mock e API é explícita por configuração e preserva o [contrato da API v1.0](docs/contrato_api.md), sem fallback silencioso.
 
 ## 2. Divisão do trabalho
 
-Fernando assume o Dev 1. Os papéis dos Devs 2–5 ainda não têm nomes atribuídos neste documento. A divisão abaixo define entregas e responsabilidades; os caminhos do back-end são sugestões de organização e **ainda não representam arquivos implementados**.
+Fernando assume o Dev 1. Os nomes dos responsáveis pelos Devs 2–5 ainda não foram registrados neste documento. A divisão abaixo descreve as entregas implementadas.
 
 | Dev | Frente principal | Entrega para o grupo | Status | Depende de |
 | :---: | :--- | :--- | :---: | --- |
 | **1 — Fernando** | Base, componentes React, mocks e integração da interface | Front executável sem Python, tipos e contrato para o back-end | Concluído (Front) | Contrato alinhado com Dev 5 |
-| **2** | Dados, importação e validação | Ingestão CSV/JSON/XML, validação 13 colunas, 4 bases e 17 testes | **Concluído [x]** | Esquema de 13 colunas |
-| **3** | Regressão de produtividade | Pipeline de regressão, métricas, persistência joblib e inferência | Implementado (módulo Python) | Dados do Dev 2 |
-| **4** | Classificação de risco | Pipeline de classificação, matriz 3x3, probabilidades e joblib | Implementado (módulo Python) | Dados do Dev 2; pré-processamento alinhado com Dev 3 |
-| **5** | API Python e integração do back-end | Servidor Flask REST, rotas HTTP e registro de modelos pré-carregados | Pendente [ ] | Contrato e funções de dados/modelos |
+| **2** | Dados, importação e validação | Ingestão CSV/JSON/XML, validação 13 colunas, 4 bases e 18 testes | **Concluído [x]** | Esquema de 13 colunas |
+| **3** | Regressão de produtividade | Pipeline de regressão, métricas, persistência joblib e inferência | **Concluído [x]** | Dados do Dev 2 |
+| **4** | Classificação de risco | Pipeline de classificação, matriz 3x3, probabilidades e joblib | **Concluído [x]** | Dados do Dev 2; pré-processamento alinhado com Dev 3 |
+| **5** | API Python e integração do back-end | Servidor Flask REST, rotas HTTP e registro de bases/modelos | **Concluído [x]** | Contrato e funções de dados/modelos |
 
 Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os módulos no servidor; o Dev 1 conecta a interface ao servidor. Alterações no contrato precisam ser combinadas entre as duas frentes e refletidas nos tipos, validadores e exemplos.
 
@@ -59,8 +59,8 @@ Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os 
 
 **O que falta nesta frente:**
 
-- [ ] Integrar a API real entregue pelo Dev 5 e testar os resultados dos Devs 3 e 4.
-- [ ] Conferir os fluxos completos de sucesso e erro com o back-end ligado.
+- [x] Integrar a API real entregue pelo Dev 5 e testar os resultados dos Devs 3 e 4.
+- [ ] Conferir os fluxos completos de sucesso e erro com o back-end ligado, no navegador.
 - [ ] Fazer o ensaio final de apresentação e revisar responsividade e acessibilidade.
 
 **Critério de conclusão:** a interface deve continuar funcionando em modo mock e também realizar upload → treino → previsão em modo real, sem apresentar dados simulados como resultados reais.
@@ -80,19 +80,19 @@ Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os 
 - [x] No XML, rejeitar DTD, entidades (XXE), atributos e elementos aninhados com `defusedxml`.
 - [x] Retornar dados normalizados, resumo estatístico e envelope compatível com `Dataset` (`mode: "real"`).
 - [x] Gerar e documentar 4 bases de teste acadêmico com variação edafoclimática (`safra_soja_favoravel.csv`, `safra_milho_seca_severa.json`, `safra_algodao_cerrado.xml`, `safra_mista_sul.csv`).
-- [x] Testar os três formatos com 17 testes automatizados aprovados no pytest (100% green).
+- [x] Testar os três formatos e os tipos nativos do JSON com 18 testes automatizados aprovados no pytest.
 
-*Consulte as instruções detalhadas e próximos passos dos Devs 3, 4 e 5 no documento [`backend/README.md`](file:///c:/Users/kinha/OneDrive/Área%20de%20Trabalho/topicos%20software/ML_AGROSENSE/backend/README.md).*
+Consulte a instalação, a execução e as políticas do servidor no [guia do back-end](backend/README.md).
 
 **Entrega aos outros devs:** registros normalizados para a API e dados tabulares para regressão/classificação, com esquema e regras de limpeza explícitos. A imputação aprendida deve ocorrer dentro dos pipelines de treino dos Devs 3 e 4, depois da divisão treino/teste.
 
 **Critério de conclusão:** importar o mesmo conteúdo em formatos diferentes deve produzir dados e resumos equivalentes; arquivos inválidos devem falhar de forma controlada.
 
-### Dev 3 — regressão de produtividade
+### Dev 3 — regressão de produtividade (Concluído [x])
 
 **Responsabilidade:** prever `produtividade_sc_ha`, em sacas por hectare.
 
-**Área sugerida:** `backend/app/ml/regression.py`, pré-processamento compartilhado em `backend/app/ml/` e testes de regressão em `backend/tests/`.
+**Área implementada:** `backend/app/ml/regression.py`, pré-processamento compartilhado em `backend/app/ml/` e testes de regressão em `backend/tests/`.
 
 **Tarefas:**
 
@@ -110,11 +110,11 @@ Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os 
 
 **Critério de conclusão:** um novo cenário válido deve gerar uma previsão usando o mesmo pré-processamento do treino, sem receber a produtividade observada e sem treinar novamente durante a inferência.
 
-### Dev 4 — classificação de risco
+### Dev 4 — classificação de risco (Concluído [x])
 
 **Responsabilidade:** prever `risco_quebra`, com classes `Baixo`, `Moderado` e `Alto`.
 
-**Área sugerida:** `backend/app/ml/classification.py` e testes de classificação em `backend/tests/`.
+**Área implementada:** `backend/app/ml/classification.py` e testes de classificação em `backend/tests/`.
 
 **Tarefas:**
 
@@ -131,30 +131,47 @@ Cada dev implementa, testa e documenta sua própria entrega. O Dev 5 conecta os 
 
 **Entrega ao Dev 5:** funções de treino/avaliação e inferência, pipeline ajustado, classes, métricas e auditoria no formato do contrato.
 
-Consulte o [guia de entrega do Dev 4](docs/entrega_dev4.md). O módulo Python está implementado; a integração HTTP depende do Dev 5.
+Consulte o [guia de entrega do Dev 4](docs/entrega_dev4.md). O módulo está conectado às rotas HTTP do Dev 5.
 
 **Critério de conclusão:** a soma da matriz deve corresponder ao tamanho do teste, a acurácia deve corresponder à diagonal e as probabilidades, quando existentes, devem respeitar a ordem das classes e somar 1.
 
-### Dev 5 — API Python e integração do back-end
+### Dev 5 — API Python e integração do back-end (Concluído [x])
 
 **Responsabilidade:** expor as entregas dos Devs 2–4 por HTTP, preservando o estado correto de bases e modelos.
 
-**Área sugerida:** `backend/app/routes/`, `backend/app/services/`, inicialização da aplicação, `backend/requirements.txt` e testes HTTP em `backend/tests/`.
+**Área implementada:** `backend/app/main.py` (factory, CORS e tratadores de erro), `backend/app/errors.py`, `backend/app/routes/`, `backend/app/services/model_registry.py` e testes HTTP em `backend/tests/test_api.py`.
 
-**Tarefas:**
+**Tarefas concluídas:**
 
-- [ ] Criar a aplicação Python. Flask é a proposta inicial; qualquer mudança deve preservar o contrato combinado.
-- [ ] Implementar `/api/health`, `/api/data`, `/api/upload`, `/api/model/train` e `/api/predict`.
-- [ ] Conectar a ingestão do Dev 2 e os pipelines dos Devs 3 e 4, sem reimplementar suas regras nas rotas.
-- [ ] Disponibilizar uma base padrão para a carga inicial da interface.
-- [ ] Gerenciar `dataset_id` e `model_id`, com tarefa, configuração e versão associadas a cada modelo.
-- [ ] Impedir previsão com modelo de outra base/tarefa e cultura ausente no treinamento.
-- [ ] Manter modelos de regressão e classificação independentes; retornar apenas as tarefas solicitadas e disponíveis.
-- [ ] Preservar o estado válido anterior quando upload ou treino falharem.
-- [ ] Configurar CORS para as origens locais do front e retornar erros JSON padronizados.
-- [ ] Documentar dependências, ambiente, instalação e comandos reais de execução do servidor.
-- [ ] Definir armazenamento, descarte de artefatos e comportamento com múltiplos clientes.
-- [ ] Testar as rotas e executar a integração final junto do Dev 1.
+- [x] Criar a aplicação Flask com factory testável e execução na porta 8000.
+- [x] Implementar `/api/health`, `/api/data`, `/api/upload`, `/api/model/train` e `/api/predict`.
+- [x] Conectar a ingestão do Dev 2 e os pipelines dos Devs 3 e 4, sem duplicar suas regras nas rotas.
+- [x] Disponibilizar `safra_mista_sul.csv` como base padrão para a carga inicial.
+- [x] Gerenciar `dataset_id` e `model_id`, mantendo artefato, tarefa e configuração associados.
+- [x] Impedir previsão com modelo de outra base/tarefa e cultura ausente no treinamento.
+- [x] Manter modelos de regressão e classificação independentes e combinar apenas tarefas solicitadas.
+- [x] Preservar o estado válido anterior quando upload ou treino falharem.
+- [x] Configurar CORS local e erros JSON padronizados em português.
+- [x] Documentar dependências, execução, armazenamento e comportamento com múltiplos clientes.
+- [x] Cobrir as rotas e o fluxo upload → treino → previsão com testes HTTP.
+
+**Rotas expostas:** `GET /api/health`, `GET /api/data` (com `?dataset_id=` opcional), `POST /api/upload`, `POST /api/model/train` e `POST /api/predict`. As rotas apenas orquestram os módulos existentes; regras de dados e de aprendizado permanecem nos módulos dos Devs 2–4.
+
+**Estado do servidor:** bases e modelos ficam em memória, compartilhados por todos os clientes da mesma instância e descartados ao reiniciar o processo. O mesmo conteúdo normalizado gera o mesmo `dataset_id`; cada treino gera um novo `model_id`. Não há autenticação nem isolamento por usuário nesta versão acadêmica. Os detalhes estão no [guia do back-end](backend/README.md).
+
+**Erros:** envelope `{"erro": {"codigo": ..., "mensagem": ...}}` em português, nos status 400, 404, 409, 413, 415, 422 e 500. Falhas inesperadas expõem mensagem genérica e registram o traceback apenas no log do servidor.
+
+**Verificações executadas:**
+
+| Verificação | Resultado |
+| --- | --- |
+| `pytest backend/tests -q` | 68 testes aprovados |
+| `ruff check backend` | Sem problemas |
+| `pnpm test` | 26 testes do front-end aprovados |
+| `pnpm build` | Aprovado, com o aviso conhecido de chunk acima de 500 kB |
+| Fluxo HTTP real | `health` 200 → `upload` 201 → dois `model/train` 201 → `predict` 200 |
+
+As respostas reais do servidor também foram submetidas aos validadores de contrato do front (`frontend/src/services/contracts.ts`) e aprovadas.
 
 **Entrega ao Dev 1:** API executável, instruções de configuração e respostas compatíveis com os tipos e validadores existentes. Usar `mode: "real"` nas respostas da API.
 
@@ -190,7 +207,7 @@ ML_AGROSENSE/
 │   │   ├── types/             # tipos de domínio e contrato
 │   │   └── tests/             # domínio, XML, HTTP e componentes/estado
 │   └── public/examples/       # arquivos disponíveis para download na interface
-├── backend/                   # por enquanto, guia de implementação da equipe
+├── backend/                   # API Flask, ingestão, pipelines e testes HTTP
 ├── data/examples/             # cópias dos exemplos para o back-end
 ├── docs/                      # contrato, arquitetura, revisão e apresentação
 └── .github/workflows/         # verificação do front em teste/build
@@ -221,7 +238,27 @@ Na pasta `frontend/`, os comandos adicionais são:
 
 O workflow de GitHub executa testes e build para alterações no front. Cada integrante também deve rodar as verificações locais pertinentes antes de abrir seu PR.
 
-## 6. Conectar a API quando estiver pronta
+## 6. Executar e conectar a API
+
+Requisitos: Python 3.10 ou superior. Na raiz do repositório, no Windows:
+
+```powershell
+python -m venv backend/.venv
+./backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.txt
+cd backend
+./.venv/Scripts/python.exe -m app.main
+```
+
+Em Linux/macOS:
+
+```bash
+python3 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -r backend/requirements.txt
+cd backend
+./.venv/bin/python -m app.main
+```
+
+A API escuta em `http://127.0.0.1:8000/api` e `GET /api/health` confirma a prontidão. Os testes do back-end rodam com `python -m pytest backend/tests -q` a partir da raiz. Consulte a política de armazenamento e o detalhamento das rotas no [guia do back-end](backend/README.md).
 
 Copiar `frontend/.env.example` para `frontend/.env.local` e configurar:
 
@@ -230,19 +267,20 @@ VITE_USE_MOCK=false
 VITE_API_URL=http://localhost:8000/api
 ```
 
-Reiniciar o Vite após alterar as variáveis. O back-end deve permitir `http://127.0.0.1:5173` e `http://localhost:5173` no CORS.
+Reiniciar o Vite após alterar as variáveis. O back-end permite `http://127.0.0.1:5173` e `http://localhost:5173` no CORS.
 
-As respostas são validadas em tempo de execução. Uma resposta HTTP 200 pode ser rejeitada por campos ausentes, identificadores incorretos ou números inconsistentes. O [contrato](docs/contrato_api.md) é a referência para implementar o servidor. Seus comandos de instalação e execução serão acrescentados quando o back-end existir.
+As respostas são validadas em tempo de execução. Uma resposta HTTP 200 pode ser rejeitada por campos ausentes, identificadores incorretos ou números inconsistentes. O [contrato](docs/contrato_api.md) permanece como referência comum.
 
 ## 7. Critérios de conclusão do projeto
 
-- [ ] Upload real dos três formatos, com esquema validado no servidor.
-- [ ] Troca de base atualiza os dados e invalida os modelos anteriores na interface.
-- [ ] Treinamento real de regressão e classificação sem reiniciar a aplicação.
-- [ ] Hiperparâmetros da interface aplicados aos estimadores correspondentes.
-- [ ] Métricas, matriz e auditoria consistentes com o mesmo teste.
-- [ ] Simulador usa os modelos registrados para a base ativa.
-- [ ] Erros de arquivo, validação, treino e rede tratados sem perder estado válido.
+- [x] Upload real dos três formatos, com esquema validado no servidor.
+- [x] Troca de base atualiza os dados e invalida os modelos anteriores na interface.
+- [x] Treinamento real de regressão e classificação sem reiniciar a aplicação.
+- [x] Hiperparâmetros da interface aplicados aos estimadores correspondentes.
+- [x] Métricas, matriz e auditoria consistentes com o mesmo teste.
+- [x] Simulador usa os modelos registrados para a base ativa.
+- [x] Erros de arquivo, validação, treino e rede tratados sem perder estado válido.
+- [ ] Ensaio do fluxo completo no navegador, com o back-end ligado.
 - [ ] Instalação e execução reproduzidas por outro integrante.
 - [ ] Responsabilidades individuais e limitações dos resultados explicadas na apresentação.
 
@@ -254,9 +292,9 @@ O mapa depende de internet para o fundo cartográfico; a tabela de coordenadas p
 
 | Documento | Quando consultar |
 | --- | --- |
-| [Contrato da API v1.0](docs/contrato_api.md) | Implementar e integrar as rotas |
+| [Contrato da API v1.0](docs/contrato_api.md) | Manter e validar a integração entre front e back-end |
 | [Guia do front-end](frontend/README.md) | Executar e manter a interface |
-| [Guia do back-end](backend/README.md) | Preparar as entregas dos Devs 2–5 |
+| [Guia do back-end](backend/README.md) | Instalar, executar, testar e entender o estado da API |
 | [Arquitetura dos componentes](docs/arquitetura_frontend.md) | Reutilizar e organizar componentes React |
 | [Revisão técnica](docs/revisao_tecnica.md) | Consultar problemas corrigidos e melhorias pendentes |
 | [Roteiro do Dev 1](docs/roteiro_dev1.md) | Preparar a demonstração da interface |
@@ -266,6 +304,3 @@ O mapa depende de internet para o fundo cartográfico; a tabela de coordenadas p
 As [propostas iniciais de Streamlit](docs/proposta_original_streamlit.md) e de [front-end React](docs/proposta_frontend_inicial.md) foram preservadas como histórico. A implementação atual segue React e o contrato v1.0; comandos e responsabilidades antigos não substituem este README.
 
 O planejamento inicial menciona apresentação em **04/11** e entrega final em **11/11**. Confirmar datas e critérios no cronograma oficial da disciplina.
-
-
-Entrega do Dev 3: consulte o [guia de regressão](docs/entrega_dev3.md). O módulo Python está implementado; a integração HTTP depende do Dev 5. O artefato joblib contém pipeline e metadados e deve ser carregado com `load_regression`.

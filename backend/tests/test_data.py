@@ -6,15 +6,14 @@ limites físicos e geração de resumos estatísticos.
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from app.data.loader import (
     DataLoadError,
+    DataSchemaError,
     load_csv,
     load_dataset,
     load_json,
@@ -59,6 +58,14 @@ class TestLoader:
             load_json('{"chave": "valor"}')
         with pytest.raises(DataLoadError, match="não contém registros"):
             load_json("[]")
+
+    def test_load_json_requires_native_json_types(self):
+        with pytest.raises(DataSchemaError, match="número JSON finito"):
+            load_json('[{"area_hectares": "100"}]')
+        with pytest.raises(DataSchemaError, match="texto JSON"):
+            load_json('[{"municipio": 123}]')
+        with pytest.raises(DataSchemaError, match="deve ser um objeto"):
+            load_json("[1]")
 
     def test_load_xml_examples(self):
         xml_file = EXAMPLES_DIR / "safra_algodao_cerrado.xml"
