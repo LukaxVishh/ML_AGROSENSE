@@ -5,6 +5,7 @@ Centraliza a ingestão, validação, sumarização e empacotamento das bases de 
 
 from app.data.loader import (
     DataLoadError,
+    DataSchemaError,
     load_csv,
     load_dataset,
     load_json,
@@ -20,6 +21,7 @@ from app.data.validator import (
 
 __all__ = [
     "DataLoadError",
+    "DataSchemaError",
     "DataValidationError",
     "COLUMNS_ORDER",
     "load_dataset",

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 import json
+import math
 from pathlib import Path
 from typing import Any, BinaryIO, TextIO, Union
 
@@ -16,6 +17,10 @@ import pandas as pd
 
 class DataLoadError(ValueError):
     """Exceção disparada quando um arquivo não pode ser lido ou estruturado."""
+
+
+class DataSchemaError(DataLoadError):
+    """Exceção disparada quando os tipos declarados no arquivo violam o contrato."""
 
 
 NUMERIC_COLUMNS = {
@@ -29,6 +34,7 @@ NUMERIC_COLUMNS = {
     "teor_argila_pct",
     "produtividade_sc_ha",
 }
+TEXT_COLUMNS = {"talhao_id", "municipio", "cultura", "risco_quebra"}
 
 
 def _read_content_as_text(source: Union[str, bytes, Path, BinaryIO, TextIO]) -> str:
@@ -109,12 +115,32 @@ def load_json(source: Union[str, bytes, Path, BinaryIO, TextIO]) -> pd.DataFrame
     if not data:
         raise DataLoadError("O arquivo JSON não contém registros.")
 
+    # O contrato exige números JSON nativos: "100" é texto e deve falhar, enquanto
+    # CSV e XML continuam convertendo valores textuais por não terem tipagem.
+    # `type(...) not in (int, float)` também descarta bool, que é subclasse de int.
+    for index, record in enumerate(data, start=1):
+        if not isinstance(record, dict):
+            raise DataSchemaError(f"Registro {index}: cada item do JSON deve ser um objeto.")
+        for column in NUMERIC_COLUMNS & record.keys():
+            value = record[column]
+            if type(value) not in (int, float) or (type(value) is float and not math.isfinite(value)):
+                raise DataSchemaError(
+                    f"Registro {index}: o campo '{column}' deve ser um número JSON finito."
+                )
+        for column in TEXT_COLUMNS & record.keys():
+            if not isinstance(record[column], str):
+                raise DataSchemaError(
+                    f"Registro {index}: o campo '{column}' deve ser um texto JSON."
+                )
+
     df = pd.DataFrame(data)
 
-    # Conversão explícita para garantir tipos float nativos
+    # Normalização de inteiros e floats JSON para colunas numéricas do DataFrame.
+    # Sem `errors="coerce"`: os tipos já foram conferidos acima e um erro silencioso
+    # viraria NaN, mascarando um arquivo fora do contrato.
     for col in NUMERIC_COLUMNS:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+            df[col] = pd.to_numeric(df[col])
 
     return df
 
